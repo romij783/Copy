@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>JARVIS X | NEURAL LIVE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -29,6 +31,26 @@
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+
+        /* Android Mobile Fixes */
+        * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        input, textarea, button { font-size: 16px !important; }
+
+        /* Mobile Live Overlay */
+        @media (max-width: 640px) {
+            #live-overlay { padding: 1rem; }
+            #live-overlay .relative.w-72 { width: 220px; height: 220px; }
+            #live-overlay h2 { font-size: 1.3rem; }
+            #live-overlay .flex.gap-10 { gap: 1.5rem; }
+            #live-overlay .flex.gap-10 button { width: 56px; height: 56px; }
+        }
+
+        /* Voice active indicator */
+        @keyframes voice-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0, 242, 255, 0.4); } 50% { box-shadow: 0 0 0 12px rgba(0, 242, 255, 0); } }
+        .voice-active { animation: voice-pulse 1.5s infinite; background: rgba(0, 242, 255, 0.2) !important; }
+
+        /* Live mode control labels */
+        .control-label { font-size: 9px; font-family: 'Orbitron', sans-serif; color: rgba(0, 242, 255, 0.6); text-align: center; margin-top: 6px; letter-spacing: 0.1em; }
     </style>
 </head>
 <body class="flex flex-col">
@@ -86,23 +108,23 @@
 
     <!-- Gemini Live Style Full Overlay -->
     <div id="live-overlay" class="fixed inset-0 z-[100] bg-black hidden flex-col items-center justify-center p-6">
-        <button onclick="exitLiveMode()" class="absolute top-10 right-10 text-gray-500 hover:text-white z-50"><i data-lucide="x-circle" class="w-10 h-10"></i></button>
-        
+        <button onclick="exitLiveMode()" class="absolute top-6 right-6 text-gray-500 hover:text-white z-50"><i data-lucide="x-circle" class="w-10 h-10"></i></button>
+
         <!-- Live Camera Circle -->
-        <div class="relative w-72 h-72 md:w-96 md:h-96 rounded-full overflow-hidden border-4 border-cyan-500/30 neon-glow mb-10 flex items-center justify-center">
-            <video id="live-video" class="absolute inset-0" autoplay playsinline></video>
+        <div class="relative w-72 h-72 md:w-96 md:h-96 rounded-full overflow-hidden border-4 border-cyan-500/30 neon-glow mb-8 flex items-center justify-center">
+            <video id="live-video" class="absolute inset-0" autoplay playsinline muted></video>
             <div id="vision-scanner" class="absolute inset-0 pointer-events-none border-t-2 border-cyan-500/50 hidden opacity-50"></div>
             <div class="pulse-effect" style="width: 100%; height: 100%;"></div>
             <div class="pulse-effect" style="width: 100%; height: 100%; animation-delay: 1s;"></div>
         </div>
 
-        <div class="text-center mb-10">
-            <h2 class="text-3xl orbitron font-bold text-white mb-2 tracking-widest">NEURAL LIVE</h2>
+        <div class="text-center mb-6">
+            <h2 class="text-2xl md:text-3xl orbitron font-bold text-white mb-2 tracking-widest">NEURAL LIVE</h2>
             <p id="live-status" class="text-cyan-500 text-xs orbitron tracking-[0.4em] animate-pulse">LISTENING...</p>
         </div>
 
         <!-- Dynamic Waveform -->
-        <div class="flex items-end gap-1.5 h-12 mb-10" id="waveform">
+        <div class="flex items-end gap-1.5 h-12 mb-6" id="waveform">
             <div class="wave-bar" style="animation-delay: 0.1s"></div>
             <div class="wave-bar" style="animation-delay: 0.3s"></div>
             <div class="wave-bar" style="animation-delay: 0.2s"></div>
@@ -110,9 +132,20 @@
             <div class="wave-bar" style="animation-delay: 0.3s"></div>
         </div>
 
-        <div class="flex gap-10">
-            <button onclick="toggleMic()" id="live-mic" class="w-16 h-16 rounded-full glass border border-cyan-500/30 flex items-center justify-center text-cyan-400"><i data-lucide="mic" class="w-8 h-8"></i></button>
-            <button onclick="processVision()" class="w-16 h-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg"><i data-lucide="scan" class="w-8 h-8"></i></button>
+        <!-- Live Controls with Labels -->
+        <div class="flex gap-8 md:gap-10">
+            <div class="flex flex-col items-center">
+                <button onclick="toggleMic()" id="live-mic" class="w-14 h-14 md:w-16 md:h-16 rounded-full glass border border-cyan-500/30 flex items-center justify-center text-cyan-400"><i data-lucide="mic" class="w-7 h-7 md:w-8 md:h-8"></i></button>
+                <span class="control-label">VOICE</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <button onclick="processVision()" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg"><i data-lucide="scan" class="w-7 h-7 md:w-8 md:h-8"></i></button>
+                <span class="control-label">SCAN</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <button onclick="switchCamera()" id="cam-switch" class="w-14 h-14 md:w-16 md:h-16 rounded-full glass border border-cyan-500/30 flex items-center justify-center text-cyan-400"><i data-lucide="refresh-cw" class="w-7 h-7 md:w-8 md:h-8"></i></button>
+                <span class="control-label">CAMERA</span>
+            </div>
         </div>
     </div>
 
@@ -120,7 +153,7 @@
 
     <script>
         lucide.createIcons();
-        
+
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const apiKey = document.getElementById('api-key');
@@ -132,6 +165,8 @@
         let isLive = false;
         let isSpeaking = false;
         let recognition;
+        let currentFacing = "environment";
+        let currentStream = null;
         const synth = window.speechSynthesis;
 
         // --- Auth Setup ---
@@ -155,7 +190,7 @@
         // --- Human Voice Engine ---
         function speak(text) {
             synth.cancel();
-            
+
             // Filter: No emojis or symbols for voice
             let cleanText = text.replace(/[*#`_~>]/g, '')
                                 .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}]/gu, '');
@@ -164,24 +199,35 @@
                 const utterance = new SpeechSynthesisUtterance(cleanText);
                 const voices = synth.getVoices();
                 const isBengali = /[\u0980-\u09FF]/.test(text);
-                
+
                 utterance.voice = voices.find(v => isBengali ? v.lang.includes('bn') : v.lang.includes('en-IN')) || voices[0];
                 utterance.pitch = 0.95;
                 utterance.rate = 1.05;
 
                 utterance.onstart = () => { isSpeaking = true; liveStatus.textContent = "JARVIS SPEAKING..."; };
                 utterance.onend = () => { isSpeaking = false; liveStatus.textContent = "LISTENING..."; if(isLive) startVoiceRec(); };
-                
+
                 synth.speak(utterance);
             }, 500);
         }
 
         // --- Live Mode & Vision Core ---
+        async function startCamera(facing) {
+            if(currentStream) currentStream.getTracks().forEach(t => t.stop());
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: true
+            });
+            liveVideo.srcObject = stream;
+            currentStream = stream;
+            return stream;
+        }
+
         async function enterLiveMode() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
-                liveVideo.srcObject = stream;
+                await startCamera(currentFacing);
                 liveOverlay.classList.remove('hidden');
+                liveOverlay.style.display = 'flex';
                 document.body.classList.add('live-active');
                 isLive = true;
                 speak("Live vision initialized. I am watching, sir.");
@@ -190,17 +236,29 @@
         }
 
         function exitLiveMode() {
-            liveVideo.srcObject.getTracks().forEach(t => t.stop());
+            if(currentStream) currentStream.getTracks().forEach(t => t.stop());
+            currentStream = null;
             liveOverlay.classList.add('hidden');
+            liveOverlay.style.display = 'none';
             document.body.classList.remove('live-active');
             isLive = false;
-            recognition.stop();
+            if(recognition) try { recognition.stop(); } catch(e) {}
+        }
+
+        async function switchCamera() {
+            if(!isLive) return;
+            currentFacing = currentFacing === "environment" ? "user" : "environment";
+            try {
+                await startCamera(currentFacing);
+            } catch(e) {
+                currentFacing = currentFacing === "environment" ? "user" : "environment";
+            }
         }
 
         async function processVision(voicePrompt = "What do you see?") {
             if(!isLive) return;
             liveStatus.textContent = "ANALYZING...";
-            
+
             canvas.width = liveVideo.videoWidth;
             canvas.height = liveVideo.videoHeight;
             canvas.getContext('2d').drawImage(liveVideo, 0, 0);
@@ -228,12 +286,29 @@
             } catch(e) { speak("Neural vision uplink lost."); }
         }
 
-        // --- Speech Recognition ---
-        if('webkitSpeechRecognition' in window) {
-            recognition = new webkitSpeechRecognition();
+        // --- Speech Recognition (Android + Chrome) ---
+        const SpeechRecAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if(SpeechRecAPI) {
+            recognition = new SpeechRecAPI();
             recognition.continuous = false;
             recognition.interimResults = false;
-            
+            recognition.lang = 'bn-BD';
+
+            recognition.onstart = () => {
+                document.getElementById('live-mic').classList.add('voice-active');
+            };
+
+            recognition.onend = () => {
+                document.getElementById('live-mic').classList.remove('voice-active');
+            };
+
+            recognition.onerror = (e) => {
+                document.getElementById('live-mic').classList.remove('voice-active');
+                if(isLive && e.error !== 'aborted' && e.error !== 'no-speech') {
+                    setTimeout(() => startVoiceRec(), 1000);
+                }
+            };
+
             recognition.onresult = (e) => {
                 const txt = e.results[0][0].transcript;
                 if(isLive) {
@@ -250,7 +325,18 @@
         }
 
         function startVoiceRec() {
-            if(!isSpeaking) try { recognition.start(); } catch(e) {}
+            if(!isSpeaking && recognition) try { recognition.start(); } catch(e) {}
+        }
+
+        function toggleMic() {
+            if(isSpeaking) {
+                synth.cancel();
+                isSpeaking = false;
+                liveStatus.textContent = "LISTENING...";
+                startVoiceRec();
+            } else {
+                startVoiceRec();
+            }
         }
 
         // --- Chat Processing ---
@@ -283,7 +369,7 @@
         function addMessage(who, msg, isUser) {
             const div = document.createElement('div');
             div.className = `flex gap-4 max-w-2xl animate-fade-in ${isUser ? 'ml-auto flex-row-reverse' : ''}`;
-            
+
             const icon = isUser ? 'user' : 'bot';
             const color = isUser ? 'gray-700' : 'cyan-900/20';
 
@@ -307,6 +393,9 @@
                 b.onlevelchange = up; up();
             });
         }
+
+        // Pre-load voices for Android
+        synth.onvoiceschanged = () => synth.getVoices();
     </script>
 </body>
 </html>
