@@ -1,40 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>JARVIS X | NEURAL LIVE</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        :root { --neon: #00f2ff; --warn: #ff004c; --bg-dark: #020406; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-dark); color: #e2e8f0; overflow: hidden; height: 100vh; }
-        .orbitron { font-family: 'Orbitron', sans-serif; }
-        
-        /* Glassmorphism Design */
-        .glass { background: rgba(8, 10, 15, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .neon-glow { box-shadow: 0 0 20px rgba(0, 242, 255, 0.15); border: 1px solid rgba(0, 242, 255, 0.3); }
-        
-        /* Live Mode Animations */
-        @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.2); opacity: 0; } }
-        .pulse-effect { position: absolute; border: 2px solid var(--neon); border-radius: 50%; animation: pulse-ring 2s infinite; }
-
-        @keyframes wave { 0%, 100% { height: 10px; } 50% { height: 40px; } }
-        .wave-bar { width: 4px; background: var(--neon); border-radius: 10px; animation: wave 1.2s infinite ease-in-out; }
-
-        /* Camera Viewport */
-        #live-video { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7) contrast(1.1); transition: 1s; }
-        .live-active #live-video { filter: brightness(0.5) sepia(0.2) hue-rotate(160deg); }
-
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-
-        /* Android Mobile Fixes */
-        * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-        input, textarea, button { font-size: 16px !important; }
+index.html        input, textarea, button { font-size: 16px !important; }
 
         /* Mobile Live Overlay */
         @media (max-width: 640px) {
