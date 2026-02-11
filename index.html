@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
         :root { --neon: #00f2ff; --warn: #ff004c; --bg: #020406; --glass: rgba(10, 12, 16, 0.9); }
-        body { font-family: 'JetBrains Mono', monospace; background: var(--bg); color: #e2e8f0; overflow: hidden; height: 100vh; }
+        body { font-family: 'JetBrains Mono', monospace; background: var(--bg); color: #e2e8f0; overflow: auto; min-height: 100vh; }
         .orbitron { font-family: 'Orbitron', sans-serif; }
         .glass { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .neon-glow { border: 1px solid var(--neon); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); }
@@ -28,6 +28,40 @@
         .tool-tab.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
+        /* Typing indicator */
+        .typing-indicator span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--neon);
+            animation: typing-bounce 1.2s infinite ease-in-out;
+            margin: 0 1px;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: -1.0s; }
+        .typing-indicator span:nth-child(3) { animation-delay: -0.8s; }
+        @keyframes typing-bounce {
+            0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); }
+        }
+
+        /* For code blocks */
+        pre { position: relative; }
+        .copy-btn { position: absolute; top: 0.5rem; right: 0.5rem; background: #2d3748; border: 1px solid #4a5568; color: white; padding: 2px 6px; font-size: 10px; border-radius: 4px; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
+        pre:hover .copy-btn { opacity: 1; }
+
+        /* Copy button for regular messages */
+        .chat-msg { position: relative; }
+        .msg-copy-btn { position: absolute; top: 0.5rem; right: 0.5rem; background: #2d3748; border: 1px solid #4a5568; color: #9ab; padding: 4px; border-radius: 4px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
+        .chat-item:hover .msg-copy-btn { opacity: 0.6; }
+        .msg-copy-btn:hover { opacity: 1; color: white; }
+
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #374151; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--neon); }
+        input:checked + .slider:before { transform: translateX(14px); }
         #webcam { transform: scaleX(-1); }
     </style>
 </head>
@@ -56,6 +90,7 @@
                 <button onclick="showTab('automation')" class="px-3 py-1 text-[10px] orbitron border border-cyan-500/30 rounded hover:bg-cyan-500/10">AUTOMATION</button>
                 <button onclick="showTab('system')" class="px-3 py-1 text-[10px] orbitron border border-cyan-500/30 rounded hover:bg-cyan-500/10">SYSTEM</button>
                 <button onclick="showTab('tools')" class="px-3 py-1 text-[10px] orbitron border border-cyan-500/30 rounded hover:bg-cyan-500/10">TOOLS</button>
+                <button onclick="showTab('settings')" class="px-3 py-1 text-[10px] orbitron border border-cyan-500/30 rounded hover:bg-cyan-500/10">SETTINGS</button>
             </div>
 
             <div id="automation" class="tool-tab active space-y-3">
@@ -82,9 +117,47 @@
                         SCAN IMAGE (OCR)
                         <input type="file" id="ocr-upload" class="hidden" accept="image/*" onchange="performOCR(this)">
                     </label>
-                    <button onclick="generatePDF()" class="w-full bg-white/10 py-2 rounded">DOWNLOAD SESSION PDF</button>
+                    <button onclick="generatePDF()" class="w-full bg-white/10 py-2 rounded">DOWNLOAD PDF</button>
+                    <button onclick="clearChat()" class="w-full bg-red-900/40 text-red-400 py-2 rounded mt-2">CLEAR HISTORY</button>
                 </div>
             </div>
+
+            <div id="settings" class="tool-tab space-y-3">
+                <div class="p-3 bg-white/5 rounded-lg border border-white/10 text-[10px]">
+                    <p class="text-cyan-500 orbitron mb-2">Display Settings</p>
+                    <div class="flex items-center justify-between">
+                        <label for="toggle-video">Background Video</label>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-video" onchange="toggleBackgroundVideo(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="p-3 bg-white/5 rounded-lg border border-white/10 text-[10px]">
+                    <p class="text-cyan-500 orbitron mb-2">AI Settings</p>
+                    <div class="flex items-center justify-between">
+                        <label for="model-selector">AI Model</label>
+                        <select id="model-selector" onchange="changeModel(this.value)" class="bg-black/50 border border-white/10 rounded px-2 py-1 text-xs outline-none focus:border-cyan-500 text-cyan-400 w-40 text-right">
+                            <option value="google/gemini-pro-1.5">Gemini 1.5 Pro</option>
+                            <option value="openai/gpt-4o">GPT-4o</option>
+                            <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
+                            <option value="mistralai/mistral-large">Mistral Large</option>
+                            <option value="meta-llama/llama-3-70b-instruct">Llama 3 70B</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-3 bg-white/5 rounded-lg border border-white/10 text-[10px]">
+                    <p class="text-cyan-500 orbitron mb-2">Audio & Voice</p>
+                    <div class="flex items-center justify-between">
+                        <label for="toggle-voice">Voice Response</label>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-voice" onchange="toggleVoiceResponse(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
         </aside>
 
         <section class="flex-1 flex flex-col relative">
@@ -139,13 +212,16 @@
         const arcReactor = document.getElementById('arc-reactor');
 
         let synth = window.speechSynthesis;
+        let voices = [];
         let recognition;
+        let commandContext = null; // To hold the current context, e.g., 'youtube'
 
         // --- Voice Logic ---
-        function speak(text) {
+        const speak = (text) => {
+            if (!document.getElementById('toggle-voice').checked) return;
             synth.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
-            const voices = synth.getVoices();
+            // Use pre-loaded voices
             // Try to find a good English or Bengali voice
             utterance.voice = voices.find(v => v.lang.includes('bn-IN')) || voices.find(v => v.lang.includes('en-IN')) || voices[0];
             utterance.rate = 1.1;
@@ -154,13 +230,25 @@
             synth.speak(utterance);
         }
 
+        const loadVoices = () => {
+            voices = synth.getVoices();
+        };
+        // Voices load asynchronously
+        synth.onvoiceschanged = loadVoices;
+
         // --- OCR & PDF ---
         async function performOCR(input) {
             if(!input.files[0]) return;
-            addLog('SYSTEM', 'Scanning document...');
+            const ocrButtonLabel = input.previousElementSibling;
+            ocrButtonLabel.innerText = 'SCANNING...';
+            speak("Scanning document, please wait.");
             const { data: { text } } = await Tesseract.recognize(input.files[0], 'eng+ben');
-            addLog('JARVIS', `OCR Extraction: ${text}`);
-            speak("Scanning complete, sir. Text is on your terminal.");
+            
+            userInput.value = text;
+            userInput.dispatchEvent(new Event('input', { bubbles: true })); // Trigger auto-resize
+            userInput.focus();
+            ocrButtonLabel.innerText = 'SCAN IMAGE (OCR)';
+            speak("Scanning complete. Text is ready in the input field.");
         }
 
         function generatePDF() {
@@ -175,14 +263,153 @@
             speak("PDF compiled and saved.");
         }
 
+        // --- Custom Command Handler ---
+        function handleLocalCommand(prompt) {
+            const command = prompt.toLowerCase();
+
+            // --- Context-Specific Commands ---
+            if (commandContext === 'youtube') {
+                if (command.startsWith('play') || command.startsWith('search for') || command.includes('gaan') || command.includes('song')) {
+                    let searchQuery = '';
+                    if (command.startsWith('play ')) {
+                        searchQuery = command.substring(5); // "play a good song" -> "a good song"
+                    } else if (command.startsWith('search for ')) {
+                        searchQuery = command.substring(11);
+                    } else if (command.includes('gaan') || command.includes('song')) {
+                        searchQuery = 'latest hit songs'; // A good default for "play a song"
+                    } else if (command.includes('video')) {
+                        searchQuery = 'trending videos'; // A good default for "play a video"
+                    }
+
+                    if (searchQuery) {
+                        speak(`Of course, sir. Searching for ${searchQuery} on YouTube.`);
+                        window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`, '_blank');
+                        return true; // Command handled
+                    }
+                }
+            }
+
+            // --- General Commands / Context Setters ---
+
+            // Example: "Open Google", "Open YouTube"
+            if (command.startsWith('open ')) {
+                const site = command.substring(5).replace(/\s/g, ''); // remove spaces
+                if (site === 'youtube') {
+                    commandContext = 'youtube';
+                    speak("Right away, sir. Opening YouTube. What would you like me to play?");
+                } else {
+                    commandContext = null; // Reset context for other sites
+                    speak(`Opening ${site}`);
+                }
+                window.open(`https://www.${site}.com`, '_blank');
+                return true; // Command was handled
+            }
+
+            // Example: "Search for cute cats"
+            if (command.startsWith('search for ')) {
+                commandContext = null; // This is a general google search, so reset context
+                const query = command.substring(11);
+                speak(`Searching for ${query}`);
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+                return true;
+            }
+
+            // Example: "What is the time?"
+            if (command.includes("what is the time") || command.includes("time please")) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                const response = `Sir, the time is ${timeString}`;
+                addLog('JARVIS', response, false);
+                speak(response);
+                return true;
+            }
+
+            // --- UI & Feature Control Commands ---
+
+            // Tab Switching: "show settings", "go to tools"
+            if (command.startsWith('show ') || command.startsWith('go to ')) {
+                const tabName = command.split(' ').pop();
+                if (['automation', 'system', 'tools', 'settings'].includes(tabName)) {
+                    showTab(tabName);
+                    speak(`Of course. Opening the ${tabName} tab.`);
+                    return true;
+                }
+            }
+
+            // Tools: "download pdf", "clear history"
+            if (command.includes('download pdf') || command.includes('download session')) {
+                generatePDF();
+                return true;
+            }
+            if (command.includes('clear history') || command.includes('clear chat')) {
+                clearChat();
+                return true;
+            }
+
+            // Settings: "turn on/off video", "mute/unmute", "change model to..."
+            if (command.includes('background video')) {
+                const toggle = document.getElementById('toggle-video');
+                const action = command.includes('on') || command.includes('enable');
+                if (toggle.checked !== action) {
+                    toggle.click();
+                }
+                speak(`Background video ${action ? 'enabled' : 'disabled'}.`);
+                return true;
+            }
+            if (command.includes('voice response') || command.includes('mute') || command.includes('unmute')) {
+                const toggle = document.getElementById('toggle-voice');
+                const action = command.includes('on') || command.includes('unmute') || command.includes('enable');
+                if (toggle.checked !== action) {
+                    toggle.click();
+                }
+                // We don't use speak() here as it might be disabled
+                if (action) speak("Voice responses are now enabled.");
+                return true;
+            }
+            if (command.startsWith('change model to') || command.startsWith('switch model to')) {
+                const modelName = command.split(' to ')[1].toLowerCase();
+                const selector = document.getElementById('model-selector');
+                const option = Array.from(selector.options).find(opt => opt.text.toLowerCase().includes(modelName));
+                if (option) {
+                    selector.value = option.value;
+                    changeModel(option.value);
+                } else {
+                    speak(`Sorry sir, I could not find the model ${modelName}.`);
+                }
+                return true;
+            }
+
+            // Vision HUD: "activate vision"
+            if (command.includes('activate vision') || command.includes('terminate vision')) {
+                toggleVision();
+                speak(document.getElementById('vision-hud').classList.contains('hidden') ? "Vision terminated." : "Vision activated.");
+                return true;
+            }
+
+
+            // If no local command matches, reset context before sending to AI
+            commandContext = null;
+            return false; // No local command was handled
+        }
+
         // --- Core Action ---
         async function handleAction() {
             const prompt = userInput.value.trim();
             if(!prompt) return;
             addLog('USER', prompt, true);
             userInput.value = "";
+            userInput.style.height = 'auto'; // Reset height
+
+            // First, check if it's a local command
+            if (handleLocalCommand(prompt)) {
+                return; // Stop here if a local command was executed
+            }
+
+            // Show typing indicator
+            showTypingIndicator();
 
             try {
+                const selectedModel = document.getElementById('model-selector').value;
                 // If you use OpenRouter
                 const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                     method: "POST",
@@ -191,15 +418,17 @@
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        model: "google/gemini-pro-1.5",
+                        model: selectedModel,
                         messages: [{ role: "system", content: "You are JARVIS X. Intelligent and concise. Respond in Bengali or English based on user." }, { role: "user", content: prompt }]
                     })
                 });
                 const data = await response.json();
                 const reply = data.choices[0].message.content;
-                addLog('JARVIS', reply);
+                removeTypingIndicator();
+                addLog('JARVIS', reply, false);
                 speak(reply);
             } catch(e) {
+                removeTypingIndicator();
                 addLog('JARVIS', "Neural link error. Check API key or connection.");
             }
         }
@@ -207,23 +436,105 @@
         // --- Helpers ---
         function initializeJarvis() {
             if(apiKeyInput.value.length < 10) return alert("Valid API key required.");
+            localStorage.setItem('jarvis_api_key', apiKeyInput.value);
             document.getElementById('auth-box').classList.add('hidden');
             document.getElementById('input-box').classList.remove('hidden');
-            addLog('JARVIS', "Neural link synchronized. Welcome back, sir.");
+            addLog('JARVIS', "Neural link synchronized. Welcome back, sir.", false);
             speak("Welcome back, sir. Systems are online.");
-            navigator.mediaDevices.getUserMedia({ video: true }).then(s => webcam.srcObject = s);
+            // Only start video if the setting is enabled
+            if (document.getElementById('toggle-video').checked) {
+                startBackgroundVideo();
+            }
         }
 
         function addLog(who, msg, isUser) {
+            // Basic markdown to HTML for code blocks
+            let formattedMsg = msg.replace(/```([\s\S]*?)```/g, (match, code) => {
+                // Sanitize code before putting it in pre tag to avoid HTML injection
+                const sanitizedCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                return `<pre class="bg-black/50 p-3 rounded-md mt-2 text-white/80 text-xs overflow-x-auto"><button class="copy-btn" onclick="copyCode(this)">COPY</button><code>${sanitizedCode.trim()}</code></pre>`;
+            });
+
             const div = document.createElement('div');
-            div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''}`;
+            div.className = `flex gap-4 max-w-2xl chat-item ${isUser ? 'flex-row-reverse ml-auto' : ''} items-start`;
+            
+            const copyButtonHTML = !isUser 
+                ? `<button class="msg-copy-btn" onclick="copyMessage(this)"><i data-lucide="copy" class="w-3 h-3"></i></button>`
+                : '';
+
             div.innerHTML = `
-                <div class="w-8 h-8 rounded bg-cyan-900/30 flex items-center justify-center border border-cyan-500/20"><i data-lucide="${isUser?'user':'bot'}" class="w-4 h-4 text-cyan-400"></i></div>
-                <div class="chat-msg glass p-3 rounded-lg text-xs border-white/5 max-w-[80%]">${msg}</div>
+                <div class="w-8 h-8 rounded bg-cyan-900/30 flex items-center justify-center border border-cyan-500/20 shrink-0"><i data-lucide="${isUser?'user':'bot'}" class="w-4 h-4 text-cyan-400"></i></div>
+                <div class="chat-msg glass p-3 rounded-lg text-xs border-white/5">${formattedMsg}${copyButtonHTML}</div>
             `;
             chatFlow.appendChild(div);
-            lucide.createIcons();
+            // Create all icons for the new element (bot/user and copy)
+            lucide.createIcons({ nodes: div.querySelectorAll('[data-lucide]') });
             chatFlow.scrollTop = chatFlow.scrollHeight;
+            localStorage.setItem('jarvis_chat_history', chatFlow.innerHTML); // Save history
+        }
+
+        function showTypingIndicator() {
+            const div = document.createElement('div');
+            div.id = 'typing-indicator';
+            div.className = 'flex gap-4 max-w-2xl chat-item items-start';
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded bg-cyan-900/30 flex items-center justify-center border border-cyan-500/20 shrink-0"><i data-lucide="bot" class="w-4 h-4 text-cyan-400"></i></div>
+                <div class="chat-msg glass p-3 rounded-lg text-xs border-white/5 flex items-center h-8">
+                    <div class="typing-indicator"><span></span><span></span><span></span></div>
+                </div>
+            `;
+            chatFlow.appendChild(div);
+            lucide.createIcons({ nodes: [div.querySelector('[data-lucide]')] });
+            chatFlow.scrollTop = chatFlow.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        function copyCode(button) {
+            const pre = button.parentElement;
+            const code = pre.querySelector('code');
+            navigator.clipboard.writeText(code.innerText).then(() => {
+                button.innerText = 'COPIED!';
+                setTimeout(() => {
+                    button.innerText = 'COPY';
+                }, 2000);
+            });
+        }
+
+        function copyMessage(button) {
+            const chatMsg = button.parentElement;
+            // Clone the node to manipulate it without affecting the display
+            const clone = chatMsg.cloneNode(true);
+            // Remove any copy buttons from the clone to get clean text
+            clone.querySelectorAll('.copy-btn, .msg-copy-btn').forEach(btn => btn.remove());
+            
+            navigator.clipboard.writeText(clone.innerText.trim()).then(() => {
+                button.innerHTML = '<i data-lucide="check" class="w-3 h-3 text-green-400"></i>';
+                lucide.createIcons({ nodes: [button] });
+                setTimeout(() => { button.innerHTML = '<i data-lucide="copy" class="w-3 h-3"></i>'; lucide.createIcons({ nodes: [button] }); }, 2000);
+            });
+        }
+
+        function clearChat() {
+            if (confirm("Are you sure you want to clear the entire chat history? This cannot be undone.")) {
+                chatFlow.innerHTML = `
+                    <div class="flex gap-4 max-w-2xl">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-900/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                            <i data-lucide="bot" class="w-6 h-6 text-cyan-400"></i>
+                        </div>
+                        <div class="glass p-4 rounded-2xl rounded-tl-none text-sm border-white/5">
+                            System encrypted. Waiting for Security Key to initialize neural link, sir.
+                        </div>
+                    </div>
+                `;
+                // Re-create the icon for the newly added initial message
+                lucide.createIcons({ nodes: [chatFlow.querySelector('[data-lucide]')] });
+                localStorage.setItem('jarvis_chat_history', chatFlow.innerHTML); // Update storage with cleared state
+                speak("Chat history cleared.");
+            }
         }
 
         function showTab(id) {
@@ -247,335 +558,82 @@
             };
         }
         function startVoice() { recognition.start(); }
-    </script>
-</body>
-</html>
-    <main class="flex-1 relative flex flex-col overflow-hidden">
         
-        <!-- Chat Flow -->
-        <div id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-10 space-y-6 scroll-smooth pb-32">
-            <div class="flex gap-4 max-w-2xl">
-                <div class="w-10 h-10 rounded-xl bg-cyan-900/20 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                    <i data-lucide="bot" class="w-6 h-6 text-cyan-400"></i>
-                </div>
-                <div class="glass p-4 rounded-2xl rounded-tl-none text-sm border-white/5 shadow-xl">
-                    Greetings, sir. Neural link is active. Shall we initiate live vision?
-                </div>
-            </div>
-        </div>
-
-        <!-- Floating Live Vision Button -->
-        <button onclick="enterLiveMode()" id="live-btn" class="fixed bottom-28 right-6 w-16 h-16 bg-cyan-500 text-black rounded-full shadow-[0_0_30px_rgba(0,242,255,0.4)] flex items-center justify-center z-50 hover:scale-110 transition-transform">
-            <i data-lucide="eye" class="w-8 h-8"></i>
-        </button>
-
-        <!-- Input Section -->
-        <div class="absolute bottom-0 w-full p-4 md:p-8 glass border-t border-white/5 z-40">
-            <div id="auth-section" class="max-w-4xl mx-auto flex gap-2 mb-2">
-                <input type="password" id="api-key" placeholder="Enter OpenRouter API Key..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-cyan-500">
-                <button onclick="saveAuth()" class="px-6 py-3 bg-cyan-600 text-black font-bold text-xs orbitron rounded-xl">CHECK-IN</button>
-            </div>
-
-            <div id="input-section" class="max-w-4xl mx-auto relative hidden">
-                <div class="flex items-center gap-2 glass p-2 rounded-2xl border-white/10 neon-glow">
-                    <textarea id="user-input" rows="1" placeholder="Type or use voice..." class="flex-1 bg-transparent border-none outline-none text-sm p-3 resize-none max-h-32"></textarea>
-                    <button onclick="startVoiceRec()" class="p-3 text-gray-400 hover:text-cyan-400"><i data-lucide="mic" class="w-6 h-6"></i></button>
-                    <button onclick="handleSend()" class="p-3 bg-cyan-500 text-black rounded-xl hover:bg-cyan-300"><i data-lucide="send" class="w-6 h-6"></i></button>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Gemini Live Style Full Overlay -->
-    <div id="live-overlay" class="fixed inset-0 z-[100] bg-black hidden flex-col items-center justify-center p-6">
-        <button onclick="exitLiveMode()" class="absolute top-6 right-6 text-gray-500 hover:text-white z-50"><i data-lucide="x-circle" class="w-10 h-10"></i></button>
-
-        <!-- Live Camera Circle -->
-        <div class="relative w-72 h-72 md:w-96 md:h-96 rounded-full overflow-hidden border-4 border-cyan-500/30 neon-glow mb-8 flex items-center justify-center">
-            <video id="live-video" class="absolute inset-0" autoplay playsinline muted></video>
-            <div id="vision-scanner" class="absolute inset-0 pointer-events-none border-t-2 border-cyan-500/50 hidden opacity-50"></div>
-            <div class="pulse-effect" style="width: 100%; height: 100%;"></div>
-            <div class="pulse-effect" style="width: 100%; height: 100%; animation-delay: 1s;"></div>
-        </div>
-
-        <div class="text-center mb-6">
-            <h2 class="text-2xl md:text-3xl orbitron font-bold text-white mb-2 tracking-widest">NEURAL LIVE</h2>
-            <p id="live-status" class="text-cyan-500 text-xs orbitron tracking-[0.4em] animate-pulse">LISTENING...</p>
-        </div>
-
-        <!-- Dynamic Waveform -->
-        <div class="flex items-end gap-1.5 h-12 mb-6" id="waveform">
-            <div class="wave-bar" style="animation-delay: 0.1s"></div>
-            <div class="wave-bar" style="animation-delay: 0.3s"></div>
-            <div class="wave-bar" style="animation-delay: 0.2s"></div>
-            <div class="wave-bar" style="animation-delay: 0.4s"></div>
-            <div class="wave-bar" style="animation-delay: 0.3s"></div>
-        </div>
-
-        <!-- Live Controls with Labels -->
-        <div class="flex gap-8 md:gap-10">
-            <div class="flex flex-col items-center">
-                <button onclick="toggleMic()" id="live-mic" class="w-14 h-14 md:w-16 md:h-16 rounded-full glass border border-cyan-500/30 flex items-center justify-center text-cyan-400"><i data-lucide="mic" class="w-7 h-7 md:w-8 md:h-8"></i></button>
-                <span class="control-label">VOICE</span>
-            </div>
-            <div class="flex flex-col items-center">
-                <button onclick="processVision()" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-cyan-500 text-black flex items-center justify-center shadow-lg"><i data-lucide="scan" class="w-7 h-7 md:w-8 md:h-8"></i></button>
-                <span class="control-label">SCAN</span>
-            </div>
-            <div class="flex flex-col items-center">
-                <button onclick="switchCamera()" id="cam-switch" class="w-14 h-14 md:w-16 md:h-16 rounded-full glass border border-cyan-500/30 flex items-center justify-center text-cyan-400"><i data-lucide="refresh-cw" class="w-7 h-7 md:w-8 md:h-8"></i></button>
-                <span class="control-label">CAMERA</span>
-            </div>
-        </div>
-    </div>
-
-    <canvas id="hidden-canvas" class="hidden"></canvas>
-
-    <script>
-        lucide.createIcons();
-
-        const chatContainer = document.getElementById('chat-container');
-        const userInput = document.getElementById('user-input');
-        const apiKey = document.getElementById('api-key');
-        const liveOverlay = document.getElementById('live-overlay');
-        const liveVideo = document.getElementById('live-video');
-        const canvas = document.getElementById('hidden-canvas');
-        const liveStatus = document.getElementById('live-status');
-
-        let isLive = false;
-        let isSpeaking = false;
-        let recognition;
-        let currentFacing = "environment";
-        let currentStream = null;
-        const synth = window.speechSynthesis;
-
-        // --- Auth Setup ---
-        if(localStorage.getItem('jx_live_key')) {
-            apiKey.value = localStorage.getItem('jx_live_key');
-            toggleUI(true);
-        }
-
-        function saveAuth() {
-            if(apiKey.value.length < 10) return alert("Invalid Key");
-            localStorage.setItem('jx_live_key', apiKey.value);
-            toggleUI(true);
-            speak("Uplink successful. Neural live systems are ready.");
-        }
-
-        function toggleUI(ready) {
-            document.getElementById('auth-section').classList.toggle('hidden', ready);
-            document.getElementById('input-section').classList.toggle('hidden', !ready);
-        }
-
-        // --- Human Voice Engine ---
-        function speak(text) {
-            synth.cancel();
-
-            // Filter: No emojis or symbols for voice
-            let cleanText = text.replace(/[*#`_~>]/g, '')
-                                .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}]/gu, '');
-
-            setTimeout(() => {
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                const voices = synth.getVoices();
-                const isBengali = /[\u0980-\u09FF]/.test(text);
-
-                utterance.voice = voices.find(v => isBengali ? v.lang.includes('bn') : v.lang.includes('en-IN')) || voices[0];
-                utterance.pitch = 0.95;
-                utterance.rate = 1.05;
-
-                utterance.onstart = () => { isSpeaking = true; liveStatus.textContent = "JARVIS SPEAKING..."; };
-                utterance.onend = () => { isSpeaking = false; liveStatus.textContent = "LISTENING..."; if(isLive) startVoiceRec(); };
-
-                synth.speak(utterance);
-            }, 500);
-        }
-
-        // --- Live Mode & Vision Core ---
-        async function startCamera(facing) {
-            if(currentStream) currentStream.getTracks().forEach(t => t.stop());
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
-                audio: true
-            });
-            liveVideo.srcObject = stream;
-            currentStream = stream;
-            return stream;
-        }
-
-        async function enterLiveMode() {
-            try {
-                await startCamera(currentFacing);
-                liveOverlay.classList.remove('hidden');
-                liveOverlay.style.display = 'flex';
-                document.body.classList.add('live-active');
-                isLive = true;
-                speak("Live vision initialized. I am watching, sir.");
-                startVoiceRec();
-            } catch(e) { alert("Camera/Mic access required for Live Mode."); }
-        }
-
-        function exitLiveMode() {
-            if(currentStream) currentStream.getTracks().forEach(t => t.stop());
-            currentStream = null;
-            liveOverlay.classList.add('hidden');
-            liveOverlay.style.display = 'none';
-            document.body.classList.remove('live-active');
-            isLive = false;
-            if(recognition) try { recognition.stop(); } catch(e) {}
-        }
-
-        async function switchCamera() {
-            if(!isLive) return;
-            currentFacing = currentFacing === "environment" ? "user" : "environment";
-            try {
-                await startCamera(currentFacing);
-            } catch(e) {
-                currentFacing = currentFacing === "environment" ? "user" : "environment";
-            }
-        }
-
-        async function processVision(voicePrompt = "What do you see?") {
-            if(!isLive) return;
-            liveStatus.textContent = "ANALYZING...";
-
-            canvas.width = liveVideo.videoWidth;
-            canvas.height = liveVideo.videoHeight;
-            canvas.getContext('2d').drawImage(liveVideo, 0, 0);
-            const imageData = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
-
-            try {
-                const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${apiKey.value}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: "google/gemini-pro-1.5-exp",
-                        messages: [{
-                            role: "user",
-                            content: [
-                                { type: "text", text: `The user says: "${voicePrompt}". Analyze this live frame and respond in their language (Bangla or English). Be brief and human-like.` },
-                                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageData}` } }
-                            ]
-                        }]
-                    })
-                });
-                const data = await res.json();
-                const reply = data.choices[0].message.content;
-                addMessage('JARVIS', reply, false);
-                speak(reply);
-            } catch(e) { speak("Neural vision uplink lost."); }
-        }
-
-        // --- Speech Recognition (Android + Chrome) ---
-        const SpeechRecAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if(SpeechRecAPI) {
-            recognition = new SpeechRecAPI();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'bn-BD';
-
-            recognition.onstart = () => {
-                document.getElementById('live-mic').classList.add('voice-active');
-            };
-
-            recognition.onend = () => {
-                document.getElementById('live-mic').classList.remove('voice-active');
-            };
-
-            recognition.onerror = (e) => {
-                document.getElementById('live-mic').classList.remove('voice-active');
-                if(isLive && e.error !== 'aborted' && e.error !== 'no-speech') {
-                    setTimeout(() => startVoiceRec(), 1000);
-                }
-            };
-
-            recognition.onresult = (e) => {
-                const txt = e.results[0][0].transcript;
-                if(isLive) {
-                    if(txt.toLowerCase().includes('what') || txt.toLowerCase().includes('দেখো') || txt.toLowerCase().includes('কি')) {
-                        processVision(txt);
-                    } else {
-                        handleSend(txt);
-                    }
-                } else {
-                    userInput.value = txt;
-                    handleSend();
-                }
-            };
-        }
-
-        function startVoiceRec() {
-            if(!isSpeaking && recognition) try { recognition.start(); } catch(e) {}
-        }
-
-        function toggleMic() {
-            if(isSpeaking) {
-                synth.cancel();
-                isSpeaking = false;
-                liveStatus.textContent = "LISTENING...";
-                startVoiceRec();
+        function toggleBackgroundVideo(isChecked) {
+            localStorage.setItem('jarvis_setting_video', isChecked);
+            if (isChecked) {
+                startBackgroundVideo();
             } else {
-                startVoiceRec();
+                webcam.classList.add('hidden');
+                if (webcam.srcObject) {
+                    webcam.srcObject.getTracks().forEach(track => track.stop());
+                    webcam.srcObject = null;
+                }
             }
         }
 
-        // --- Chat Processing ---
-        async function handleSend(manualTxt = null) {
-            const prompt = manualTxt || userInput.value.trim();
-            if(!prompt) return;
-
-            addMessage('USER', prompt, true);
-            if(!manualTxt) userInput.value = "";
-
-            try {
-                const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${apiKey.value}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: "openai/gpt-4o-mini",
-                        messages: [
-                            { role: "system", content: "You are JARVIS X. Multilingual (English/Bengali). Reply in the user's language. Stay sharp, calm, and professional. You are in a neural link session." },
-                            { role: "user", content: prompt }
-                        ]
-                    })
-                });
-                const data = await res.json();
-                const reply = data.choices[0].message.content;
-                addMessage('JARVIS', reply, false);
-                speak(reply);
-            } catch(e) { addMessage('SYS', 'Connection Error'); }
+        function toggleVoiceResponse(isChecked) {
+            localStorage.setItem('jarvis_setting_voice', isChecked);
+            if (isChecked) speak("Voice responses enabled."); else synth.cancel();
         }
 
-        function addMessage(who, msg, isUser) {
-            const div = document.createElement('div');
-            div.className = `flex gap-4 max-w-2xl animate-fade-in ${isUser ? 'ml-auto flex-row-reverse' : ''}`;
-
-            const icon = isUser ? 'user' : 'bot';
-            const color = isUser ? 'gray-700' : 'cyan-900/20';
-
-            div.innerHTML = `
-                <div class="w-10 h-10 rounded-xl bg-${color} border border-cyan-500/20 flex items-center justify-center shrink-0">
-                    <i data-lucide="${icon}" class="w-6 h-6 text-cyan-400"></i>
-                </div>
-                <div class="glass p-4 rounded-3xl ${isUser ? 'rounded-tr-none border-cyan-500/20' : 'rounded-tl-none border-white/5'} text-sm leading-relaxed">
-                    ${msg}
-                </div>
-            `;
-            chatContainer.appendChild(div);
-            lucide.createIcons();
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+        function changeModel(model) {
+            localStorage.setItem('jarvis_ai_model', model);
+            speak(`AI model switched to ${model.split('/')[1] || model}.`);
         }
 
-        // Battery System
-        if(navigator.getBattery) {
-            navigator.getBattery().then(b => {
-                const up = () => document.getElementById('sys-pwr').textContent = `PWR: ${Math.round(b.level*100)}%`;
-                b.onlevelchange = up; up();
-            });
-        }
+        function startBackgroundVideo() { webcam.classList.remove('hidden'); navigator.mediaDevices.getUserMedia({ video: true }).then(s => webcam.srcObject = s).catch(e => console.error("Webcam access denied or not available.")); }
 
-        // Pre-load voices for Android
-        synth.onvoiceschanged = () => synth.getVoices();
+        // --- Event Listeners & Initializers ---
+        userInput.addEventListener('input', () => {
+            userInput.style.height = 'auto';
+            userInput.style.height = (userInput.scrollHeight) + 'px';
+        });
+
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleAction();
+            }
+        });
+
+        // Check for saved API key on load
+        window.addEventListener('load', () => {
+            loadVoices(); // Initial voice load
+
+            const savedHistory = localStorage.getItem('jarvis_chat_history');
+            if (savedHistory) {
+                chatFlow.innerHTML = savedHistory;
+                lucide.createIcons(); // Re-render all icons from saved history
+            }
+
+            const videoEnabled = localStorage.getItem('jarvis_setting_video') !== 'false'; // Default to true
+            const videoToggle = document.getElementById('toggle-video');
+            videoToggle.checked = videoEnabled;
+            if (!videoEnabled) {
+                webcam.classList.add('hidden');
+            }
+
+            const voiceEnabled = localStorage.getItem('jarvis_setting_voice') !== 'false'; // Default to true
+            const voiceToggle = document.getElementById('toggle-voice');
+            voiceToggle.checked = voiceEnabled;
+
+
+            const savedModel = localStorage.getItem('jarvis_ai_model');
+            if (savedModel) {
+                document.getElementById('model-selector').value = savedModel;
+            }
+
+            const savedKey = localStorage.getItem('jarvis_api_key');
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+                initializeJarvis();
+            }
+            // System stats simulation
+            setInterval(() => {
+                document.getElementById('sys-load').innerText = `CPU: ${Math.floor(Math.random() * 20) + 5}% RAM: ${Math.floor(Math.random() * 30) + 40}%`;
+            }, 3000);
+        });
     </script>
 </body>
 </html>
